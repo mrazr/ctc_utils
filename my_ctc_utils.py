@@ -2,8 +2,10 @@ import os
 from pathlib import PurePath
 from typing import Union, List, Tuple
 import re
-from skimage import io, color
 import random
+
+from skimage import io, color
+import numpy as np
 import matplotlib.pyplot as plt
 
 
@@ -21,7 +23,7 @@ def get_image_file_names(folder: os.PathLike, ext: str="tif") -> List[str]:
   return sorted([img_name for img_name in os.listdir(folder) if img_name.endswith(ext)])
 
 
-class CTCSequence:
+class Sequence:
   def __init__(self, root_folder: os.PathLike, seq_id: int):
     self.root_folder = root_folder
     self.folder = '0' + str(seq_id)
@@ -29,6 +31,20 @@ class CTCSequence:
     self.train_image_names = get_image_file_names(os.path.join(self.root_folder, '0' + str(self.seq_id)))
     self.gold_truths = self.get_truth_image_file_names(GT)
     self.silver_truths = self.get_truth_image_file_names(ST)
+    self.image_shape = None
+    self.image_dtype = None
+    self.ann_dtype = None
+    self.__find_image_info()
+  
+  def __find_image_info(self):
+    img_f, ann_f = self.gold_truths[0]
+    img = io.imread(os.path.join(self.root_folder, self.folder, img_f))
+    ann = io.imread(os.path.join(self.root_folder, self.folder + '_' + GT, SEG, ann_f))
+
+    self.image_shape = img.shape
+    self.image_dtype = img.dtype
+    self.ann_dtype = ann.dtype
+
 
   def get_truth_image_file_names(self, truth: str="GT") -> List[Tuple[str, str]]:
     folder = os.path.join('0' + str(self.seq_id) + '_' + truth, SEG)
@@ -65,16 +81,40 @@ class CTCSequence:
     plt.imshow(labeled)
     plt.show()
     # io.imshow(labeled)
+  
+  def load(self, truth: str=GT) -> Tuple[np.ndarray, np.ndarray]:
+    if truth not in [GT, ST]:
+      return None, None
+
+    truths = self.gold_truths if truth == GT else self.silver_truths
+
+    img_folder = os.path.join(self.root_folder, self.folder)
+    truth_folder = os.path.join(self.root_folder, self.folder + '_' + truth, SEG)
+
+    X_shape = (len(truths),) + self.image_shape
+    ann_shape = (len(truths),) + self.image_shape[:2]
+
+    X = np.zeros(X_shape, dtype=self.image_dtype)
+    y = np.zeros(ann_shape, dtype=self.ann_dtype)
+
+    for i, (img_name, truth_name) in enumerate(truths):
+      img = io.imread(os.path.join(img_folder, img_name))
+      ann = io.imread(os.path.join(truth_folder, truth_name))
+
+      X[i] = img
+      y[i] = ann
+    
+    return X, y
 
 
-class CTCDataset:
+class Dataset:
   def __init__(self, folder: os.PathLike):
     self.folder = folder
     sequence_nums = sorted(list({int(sequence_folder[1]) for sequence_folder in os.listdir(folder) if sequence_folder[0] == '0'}))
-    self.sequences = [CTCSequence(folder, seq_id) for seq_id in sequence_nums]
+    self.sequences = [Sequence(folder, seq_id) for seq_id in sequence_nums]
   
   def __str__(self):
-    lines = [f"Dataset {self.folder}"]
+    lines = [f"Dataset {os.path.basename(self.folder)}, filepath {self.folder}"]
     lines.append(f"{len(self.sequences)} sequences")
     lines.append('-------------------------------------------------------------------------------------')
     for seq in self.sequences:
@@ -82,12 +122,22 @@ class CTCDataset:
       lines.append('-------------------------------------------------------------------------------------')
     
     return "\n".join(lines)
-
-  def show_random_annotation(self, seq_id: int, truth: str=GT):
+  
+  def __check_seq_id(self, seq_id: int):
     assert 0 < seq_id <= len(self.sequences), "Sequence ID should be greater than 0 and less than or equal to " + str(len(self.sequences))
 
-    self.sequences[seq_id - 1].show_random_annotation(truth)
+  def show_random_annotation(self, seq_id: int, truth: str=GT):
+    self.__check_seq_id(seq_id)
 
+    self.sequences[seq_id - 1].show_random_annotation(truth)
+  
+  def load(self, seq_id: int, truth: str=GT) -> Tuple[np.ndarray, np.ndarray]:
+    if truth not in [GT, ST]:
+      return None, None
+
+    seq = self.sequences[seq_id]
+
+    return seq.load(truth)
 
 
 def print_dataset_info(folder: Union[os.PathLike, str]):
