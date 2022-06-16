@@ -13,7 +13,6 @@ import matplotlib.pyplot as plt
 from scipy import ndimage as nd
 import tensorflow as tf
 import tensorflow.keras as keras
-import tensorflow_io as tfio
 
 import unet
 
@@ -327,6 +326,7 @@ def get_crop_sizes(sz, d) -> List[int]:
         sizes.append(curr_img_size)
         curr_img_size -= 4
     return sizes
+
 
 def get_output_map_size(sz, d) -> int:
     return get_crop_sizes(sz, d)[-1] - 4

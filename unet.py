@@ -23,11 +23,15 @@ class UNetDataInfo:
 
 
 class CTCSequence(keras.utils.Sequence):
-    def __init__(self, img_paths: List[str], mask_paths: List[str], unet_info: UNetDataInfo, deform: bool = True):
+    def __init__(self, img_paths: List[str], mask_paths: List[str], unet_info: UNetDataInfo, deform: bool = True,
+                 sample_weights=None):
         super(CTCSequence, self).__init__()
+        if sample_weights is None:
+            sample_weights = list()
         self.img_paths = img_paths
         self.mask_paths = mask_paths
         # self.center_crop = keras.layers.experimental.preprocessing.CenterCrop(crop_size[0], crop_size[1])
+        self.sample_weights = sample_weights
         self.preprocessing = Preprocessing(unet_info, deform=deform)
 
     def __len__(self):
@@ -37,8 +41,10 @@ class CTCSequence(keras.utils.Sequence):
         img = np.expand_dims(io.imread(self.img_paths[index], as_gray=True).astype(np.float32), axis=(0, -1))
         # print(img.shape, img.dtype)
         mask = np.expand_dims(io.imread(self.mask_paths[index], as_gray=True), axis=(0, -1))
-        img, mask, sample_weights = self.preprocessing((img, mask))
-        return img, mask, sample_weights
+        img, mask = self.preprocessing((img, mask))
+        if self.sample_weights is not None:
+            return img, mask, add_sample_weights(img, mask, self.sample_weights)
+        return img, mask
 
 
 class Preprocessing(keras.layers.Layer):
@@ -69,10 +75,12 @@ class Preprocessing(keras.layers.Layer):
 
         mask_ = self.mask_resize(mask)
         #mask_ = self.mask_flip(mask_)
-        mask_ = tf.image.stateless_random_flip_left_right(mask_, flip_seed_h)
-        mask_ = tf.image.stateless_random_flip_up_down(mask_, flip_seed_v)
+        # print(mask_.dtype)
+        # mask_ = tf.cast(mask_, tf.uint16)
         if self.unet_info.binary:
             mask_ = np.where(mask_ > 0, 1, 0).astype(np.uint8)
+        mask_ = tf.image.stateless_random_flip_left_right(mask_, flip_seed_h)
+        mask_ = tf.image.stateless_random_flip_up_down(mask_, flip_seed_v)
 
         if self.elastic_deform is not None:
             img_ = np.expand_dims(np.squeeze(img_), axis=-1)
@@ -84,11 +92,13 @@ class Preprocessing(keras.layers.Layer):
         pad = (self.unet_info.input_size[0] - img_.shape[1]) // 2
         img_ = np.pad(img_, ((0, 0), (pad, pad), (pad, pad), (0, 0)), mode='reflect')
 
-        return add_sample_weights(img_, self.mask_crop(mask_))
+        # return add_sample_weights(img_, self.mask_crop(mask_))
+
+        return img_, self.mask_crop(mask_)
 
 
-def add_sample_weights(image, label):
-    class_weights = tf.constant([0.7, 0.2, 0.1])
+def add_sample_weights(image, label, weights: List[float]):
+    class_weights = tf.constant(weights)
 
     sample_weights = tf.gather(class_weights, indices=tf.cast(label, tf.int32))
 
@@ -165,7 +175,7 @@ def build_unet(input_size: Tuple[int, int] = (256, 256), depth: int = 4, n_filte
         crop_sizes: List[Tuple[int, int]] = get_crop_sizes(info.input_size[0], depth, padding=padding)[::-1]
     else:
         crop_sizes = []
-    skipped = []
+    skip_layers = []
 
     curr_image_size = np.array(info.input_size)
     filters = n_filters
@@ -179,9 +189,9 @@ def build_unet(input_size: Tuple[int, int] = (256, 256), depth: int = 4, n_filte
                                 kernel_initializer='he_normal', padding=padding, name=layer_name)(x)
         if do_cropping:
             layer_name = f'Skip_{sz2str(crop_sizes[level])}'
-            skipped.append(keras.layers.experimental.preprocessing.CenterCrop(*crop_sizes[level], name=layer_name)(x))
+            skip_layers.append(keras.layers.experimental.preprocessing.CenterCrop(*crop_sizes[level], name=layer_name)(x))
         else:
-            skipped.append(x)
+            skip_layers.append(x)
         curr_image_size = curr_image_size - size_change
         curr_image_size = curr_image_size // 2
         x = keras.layers.MaxPooling2D(strides=2, name=f'Pool_{sz2str(curr_image_size)}x{filters}')(x)
@@ -194,7 +204,7 @@ def build_unet(input_size: Tuple[int, int] = (256, 256), depth: int = 4, n_filte
                             name=f'BC_{sz2str(curr_image_size-size_change)}x{filters}')(x)
 
     curr_image_size = curr_image_size - size_change
-    skipped = skipped[::-1]
+    skipped = skip_layers[::-1]
 
     for level in range(depth - 1):
         filters = filters // 2
@@ -234,7 +244,9 @@ def get_data(ds: Dataset, unet_info: UNetDataInfo, seed: int = 42, truth: str = 
     return CTCSequence(image_names, ann_names, unet_info, deform=truth == ST)
 
 
-def get_train_val_data(ds: Dataset, unet_info: UNetDataInfo, seed: int=42, split: float=0.3):
+def get_train_val_data(ds: Dataset, unet_info: UNetDataInfo, seed: int=42, split: float=0.3, sample_weights=None):
+    if sample_weights is None:
+        sample_weights = list()
     image_names = []
     ann_names = []
 
@@ -252,8 +264,10 @@ def get_train_val_data(ds: Dataset, unet_info: UNetDataInfo, seed: int=42, split
 
     split_idx = int(round(split * len(image_names)))
 
-    val = CTCSequence(image_names[:split_idx], ann_names[:split_idx], unet_info, deform=False)
-    train = CTCSequence(image_names[split_idx:], ann_names[split_idx:], unet_info, deform=True)
+    val = CTCSequence(image_names[:split_idx], ann_names[:split_idx], unet_info, deform=False,
+                      sample_weights=sample_weights)
+    train = CTCSequence(image_names[split_idx:], ann_names[split_idx:], unet_info, deform=True,
+                        sample_weights=sample_weights)
 
     return train, val
 
