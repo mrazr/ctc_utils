@@ -236,9 +236,11 @@ def add_sample_weights(image, label, weights: typing.List[float]):
     return image, label, sample_weights
 
 
-def get_train_val(ds: ctc_dataset.Dataset, img_size: typing.Tuple[int, int]):
+def get_train_val(ds: ctc_dataset.Dataset, img_size: typing.Tuple[int, int], sample_weights: typing.List[float] = None):
     X_train, y_train, X_val, y_val = ds.train_val_split()
-    train_seq = VitbisSequence(img_paths=X_train, mask_paths=y_train, image_size=img_size, deform=True)
-    val_seq = VitbisSequence(img_paths=X_val, mask_paths=y_val, image_size=img_size, deform=False)
+    train_seq = VitbisSequence(img_paths=X_train, mask_paths=y_train, image_size=img_size, deform=True,
+                               sample_weights=sample_weights)
+    val_seq = VitbisSequence(img_paths=X_val, mask_paths=y_val, image_size=img_size, deform=False,
+                             sample_weights=sample_weights)
 
     return train_seq, val_seq
