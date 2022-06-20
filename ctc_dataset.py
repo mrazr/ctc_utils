@@ -1,6 +1,8 @@
 import os
+import pathlib
 import random
 import re
+import typing
 from typing import List, Tuple
 
 import numpy as np
@@ -171,4 +173,44 @@ class Dataset:
 
         return seq.load(truth)
 
+    def train_val_split(self, train_split: float=0.3):
+        image_paths: typing.List[pathlib.Path] = []
+        ann_paths: typing.List[pathlib.Path] = []
 
+        for seq in self.sequences:
+            examples: typing.List[typing.Tuple[str, str]] = seq.silver_truths
+            image_paths.extend([pathlib.Path(self.folder) / seq.folder / ex[0] for ex in examples])
+            ann_paths.extend([pathlib.Path(self.folder) / f'{seq.folder}_{ST}' / ex[1] for ex in examples])
+
+        indexes = list(range(len(image_paths)))
+        random.shuffle(indexes)
+
+        image_paths = [image_paths[idx] for idx in indexes]
+        ann_paths = [ann_paths[idx] for idx in indexes]
+
+        split_idx = int(train_split * len(image_paths))
+
+        X_train = image_paths[split_idx:]
+        y_train = ann_paths[split_idx:]
+
+        X_val = image_paths[:split_idx]
+        y_val = ann_paths[:split_idx]
+
+        return X_train, y_train, X_val, y_val
+
+    def test_data(self):
+        image_paths: typing.List[pathlib.Path] = []
+        ann_paths: typing.List[pathlib.Path] = []
+
+        for seq in self.sequences:
+            examples: typing.List[typing.Tuple[str, str]] = seq.gold_truths
+            image_paths.extend([pathlib.Path(self.folder) / seq.folder / ex[0] for ex in examples])
+            ann_paths.extend([pathlib.Path(self.folder) / f'{seq.folder}_ {GT}' / ex[1] for ex in examples])
+
+        indexes = list(range(len(image_paths)))
+        random.shuffle(indexes)
+
+        image_paths = [image_paths[idx] for idx in indexes]
+        ann_paths = [ann_paths[idx] for idx in indexes]
+
+        return image_paths, ann_paths

@@ -332,25 +332,25 @@ def get_output_map_size(sz, d) -> int:
     return get_crop_sizes(sz, d)[-1] - 4
 
 
-def train_unet(dataset_path: str, image_size: Tuple[int, int], epochs: int=30, unet_depth: int=4, unet_filters: int=32) -> Tuple[unet.UNet, keras.callbacks.History]:
-    dataset = Dataset(dataset_path)
-    info = UNetDataInfo(image_size, unet_depth)
-
-    train_data = dataset.get_data(info, truth=ST)
-    val_data = dataset.get_data(info, truth=GT)
-
-    model = unet.UNet(unet_depth, unet_filters, info.input_size)
-    
-    callbacks = [
-        keras.callbacks.ModelCheckpoint('./unet_model.hdf', save_best_only=True),
-    ]
-    opt = keras.optimizers.SGD()
-    model.compile(optimizer=keras.optimizers.Adam(learning_rate=1e-2), loss=keras.losses.BinaryCrossentropy(from_logits=True),
-                  metrics=['accuracy'])
-    
-    hist = model.fit(train_data, epochs=epochs, validation_data=val_data, callbacks=callbacks)
-
-    return model, hist
+# def train_unet(dataset_path: str, image_size: Tuple[int, int], epochs: int=30, unet_depth: int=4, unet_filters: int=32) -> Tuple[unet.UNet, keras.callbacks.History]:
+#     dataset = Dataset(dataset_path)
+#     info = UNetDataInfo(image_size, unet_depth)
+#
+#     train_data = dataset.get_data(info, truth=ST)
+#     val_data = dataset.get_data(info, truth=GT)
+#
+#     model = unet.UNet(unet_depth, unet_filters, info.input_size)
+#
+#     callbacks = [
+#         keras.callbacks.ModelCheckpoint('./unet_model.hdf', save_best_only=True),
+#     ]
+#     opt = keras.optimizers.SGD()
+#     model.compile(optimizer=keras.optimizers.Adam(learning_rate=1e-2), loss=keras.losses.BinaryCrossentropy(from_logits=True),
+#                   metrics=['accuracy'])
+#
+#     hist = model.fit(train_data, epochs=epochs, validation_data=val_data, callbacks=callbacks)
+#
+#     return model, hist
 
 
 CellSubimage = namedtuple('CellSubimage', ['label', 'image', 'mask'])
