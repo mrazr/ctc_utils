@@ -4,7 +4,7 @@ from tensorflow import keras
 
 
 projection_dim = 256
-DATA_FORMAT = "channels_first"
+DATA_FORMAT = "channels_last"
 
 
 def enblock(x, chans):
@@ -77,7 +77,7 @@ def create(image_size: typing.Tuple[int, int], data_format: str = 'channels_last
 
     if data_format == "channels_last":
         x = keras.layers.Permute((2, 1))(x)  # (256, 128)
-    x = keras.layers.Reshape((-1, 16, 16))(x)  # (16, 16, 128)
+    x = keras.layers.Reshape((16, 16, -1))(x)  # (16, 16, 128)
 
     feat_map = keras.layers.Conv2D(data_format=data_format, filters=64, kernel_size=1, padding="same")(x)  # (16, 16, 64)
     feat_map = keras.layers.Conv2D(data_format=data_format, filters=32, kernel_size=1, padding="same")(feat_map)  # (16, 16, 32)

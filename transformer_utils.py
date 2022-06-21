@@ -214,7 +214,7 @@ class VitbisSequence(keras.utils.Sequence):
         # self.center_crop = keras.layers.experimental.preprocessing.CenterCrop(crop_size[0], crop_size[1])
         self.sample_weights = sample_weights
         self.preprocessing = Preprocessing(resize_to=image_size, deform=deform)
-        self.permute = tf.keras.layers.Permute((3, 1, 2))
+        # self.permute = tf.keras.layers.Permute((3, 1, 2))
 
     def __len__(self):
         return len(self.img_paths)
@@ -225,8 +225,8 @@ class VitbisSequence(keras.utils.Sequence):
         mask = np.expand_dims(io.imread(self.mask_paths[index], as_gray=True), axis=(0, -1))
         img, mask = self.preprocessing((img, mask))
         if self.sample_weights is not None:
-            return self.permute(img), self.permute(mask), self.permute(add_sample_weights(img, mask, self.sample_weights))
-        return self.permute(img), self.permute(mask)
+            return img, mask, add_sample_weights(img, mask, self.sample_weights)
+        return img, mask
 
 
 def add_sample_weights(image, label, weights: typing.List[float]):
