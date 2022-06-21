@@ -224,7 +224,7 @@ class VitbisSequence(keras.utils.Sequence):
         mask = np.expand_dims(io.imread(self.mask_paths[index], as_gray=True), axis=(0, -1))
         img, mask = self.preprocessing((img, mask))
         if self.sample_weights is not None:
-            return img, mask, add_sample_weights(img, mask, self.sample_weights)
+            return add_sample_weights(img, mask, self.sample_weights)
         return img, mask
 
 
