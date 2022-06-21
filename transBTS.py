@@ -82,28 +82,28 @@ def create(image_size: typing.Tuple[int, int], data_format: str = 'channels_last
     feat_map = keras.layers.Conv2D(data_format=data_format, filters=64, kernel_size=1, padding="same")(x)  # (16, 16, 64)
     feat_map = keras.layers.Conv2D(data_format=data_format, filters=32, kernel_size=1, padding="same")(feat_map)  # (16, 16, 32)
 
-    x = keras.layers.Concatenate(axis=1)([feat_map, en4])  # (16, 16, 64)
+    x = keras.layers.Concatenate(axis=-1)([feat_map, en4])  # (16, 16, 64)
     x = enblock(enblock(x, 64), 64)  # (16, 16, 64)
 
     x = keras.layers.Conv2D(data_format=data_format, filters=64, kernel_size=3, padding="same")(x)  # (16, 16, 64)
     x = keras.layers.Conv2DTranspose(data_format=data_format, filters=64, kernel_size=3, padding="same", strides=2)(x)  # (32, 32, 64)
     x = keras.layers.Conv2D(data_format=data_format, filters=16, kernel_size=1, padding="same")(x)  # (32, 32, 16)
 
-    x = keras.layers.Concatenate(axis=1)([x, en3])  # (32, 32, 32)
+    x = keras.layers.Concatenate(axis=-1)([x, en3])  # (32, 32, 32)
     x = enblock(x, 32)  # (32, 32, 32)
 
     x = keras.layers.Conv2D(data_format=data_format, filters=32, kernel_size=3, padding="same")(x)  # (32, 32, 32)
     x = keras.layers.Conv2DTranspose(data_format=data_format, filters=32, kernel_size=3, padding="same", strides=2)(x)  # (64, 64, 32)
     x = keras.layers.Conv2D(data_format=data_format, filters=8, kernel_size=1, padding="same")(x)  # (64, 64, 8)
 
-    x = keras.layers.Concatenate(axis=1)([x, en2])  # (64, 64, 16)
+    x = keras.layers.Concatenate(axis=-1)([x, en2])  # (64, 64, 16)
     x = enblock(x, 16)  # (64, 64, 16)
 
     x = keras.layers.Conv2D(data_format=data_format, filters=16, kernel_size=3, padding="same")(x)  # (64, 64, 16)
     x = keras.layers.Conv2DTranspose(data_format=data_format, filters=16, kernel_size=3, padding="same", strides=2)(x)  # (128, 128, 16)
     x = keras.layers.Conv2D(data_format=data_format, filters=4, kernel_size=1, padding="same")(x)  # (128, 128, 4)
 
-    x = keras.layers.Concatenate(axis=1)([x, en1])  # (128, 128, 8)
+    x = keras.layers.Concatenate(axis=-1)([x, en1])  # (128, 128, 8)
     x = enblock(x, 8)  # (128, 128, 8)
 
     out = keras.layers.Conv2D(data_format=data_format, filters=1, kernel_size=1, padding="same",
