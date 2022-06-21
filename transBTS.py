@@ -4,12 +4,14 @@ from tensorflow import keras
 
 
 projection_dim = 256
+DATA_FORMAT = "channels_first"
 
 
 def enblock(x, chans):
+    global DATA_FORMAT
     bn = keras.layers.BatchNormalization()(x)
     relu = keras.layers.ReLU()(bn)
-    conv = keras.layers.Conv2D(filters=chans, kernel_size=3, padding="same")(relu)
+    conv = keras.layers.Conv2D(data_format=DATA_FORMAT, filters=chans, kernel_size=3, padding="same")(relu)
 
     return conv
 
@@ -43,7 +45,7 @@ def mlp(x, hidden_units, dropout_rate):
 
 
 def create(image_size: typing.Tuple[int, int], data_format: str = 'channels_last'):
-    input = keras.layers.Input(shape=image_size)  # (128, 128, 1)
+    input = keras.layers.Input(shape=image_size)  # (128, 128, 1) if `data_format` == 'channels_last'
 
     x = keras.layers.Conv2D(data_format=data_format, filters=4, kernel_size=3, padding="same")(input)  # (128, 128, 4)
     x = keras.layers.Dropout(0.1)(x)  # (128, 128, 4)
