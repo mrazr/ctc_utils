@@ -224,7 +224,7 @@ class VitbisSequence(keras.utils.Sequence):
         mask = np.expand_dims(io.imread(self.mask_paths[index], as_gray=True), axis=(0, -1))
         img, mask = self.preprocessing((img, mask))
         if self.sample_weights is not None:
-            return add_sample_weights(img, mask, self.sample_weights)
+            return img, mask, add_sample_weights(img, mask, self.sample_weights)
         return img, mask
 
 
@@ -233,7 +233,7 @@ def add_sample_weights(image, label, weights: typing.List[float]):
 
     sample_weights = tf.gather(class_weights, indices=tf.cast(label, tf.int32))
 
-    return image, label, sample_weights
+    return sample_weights
 
 
 def get_train_val(ds: ctc_dataset.Dataset, img_size: typing.Tuple[int, int], sample_weights: typing.List[float] = None):
