@@ -107,6 +107,6 @@ def create(image_size: typing.Tuple[int, int], data_format: str = 'channels_last
     x = enblock(x, 8)  # (128, 128, 8)
 
     out = keras.layers.Conv2D(data_format=data_format, filters=1, kernel_size=1, padding="same",
-                              activation="softmax")(x)  # (128, 128, 1)
+                              activation="sigmoid")(x)  # (128, 128, 1)
 
     return keras.Model(inputs=input, outputs=out)
