@@ -195,7 +195,7 @@ def create_vitbis(input_shape: typing.Tuple[int, int]):
         change_to_size *= 2
         x = transformer_output   #layers.Dense(units=change_to_size)(transformer_output)
 
-    out = layers.Dense(units=(image_size * image_size) // num_patches)(x)
+    out = layers.Dense(units=(image_size * image_size) // num_patches, activation='sigmoid')(x)
     out = layers.Reshape((image_size, image_size))(out)
 
     model = tf.keras.Model(inputs=inputs, outputs=out)
