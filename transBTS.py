@@ -45,6 +45,8 @@ def mlp(x, hidden_units, dropout_rate):
 
 
 def create(image_size: typing.Tuple[int, int], data_format: str = 'channels_last'):
+    global projection_dim
+    projection_dim = (image_size[0] // 8) * (image_size[1] // 8)
     input = keras.layers.Input(shape=image_size)  # (w, h, 1) if `data_format` == 'channels_last'
 
     x = keras.layers.Conv2D(data_format=data_format, filters=4, kernel_size=3, padding="same")(input)  # (w, h, 4)
