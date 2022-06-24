@@ -195,8 +195,9 @@ def create_vitbis(input_shape: typing.Tuple[int, int]):
         change_to_size *= 2
         x = transformer_output   #layers.Dense(units=change_to_size)(transformer_output)
 
-    out = layers.Dense(units=(image_size * image_size) // num_patches, activation='sigmoid')(x)
+    out = layers.Dense(units=(image_size * image_size) // num_patches, activation='relu')(x)
     out = layers.Reshape((image_size, image_size))(out)
+    out = layers.Conv2D(1, 1, activation='sigmoid')(out)
 
     model = tf.keras.Model(inputs=inputs, outputs=out)
 
@@ -207,8 +208,6 @@ class VitbisSequence(keras.utils.Sequence):
     def __init__(self, img_paths: typing.List[str], mask_paths: typing.List[str], image_size: typing.Tuple[int, int], deform: bool = True,
                  sample_weights=None):
         super().__init__()
-        if sample_weights is None:
-            sample_weights = list()
         self.img_paths = img_paths
         self.mask_paths = mask_paths
         # self.center_crop = keras.layers.experimental.preprocessing.CenterCrop(crop_size[0], crop_size[1])
