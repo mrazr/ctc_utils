@@ -7,6 +7,7 @@ from typing import List, Tuple
 
 import numpy as np
 from skimage import io, color
+import tensorflow as tf
 
 from img_utils import *
 
@@ -214,3 +215,40 @@ class Dataset:
         ann_paths = [ann_paths[idx] for idx in indexes]
 
         return image_paths, ann_paths
+
+    def image_paths(self) -> List[pathlib.Path]:
+        image_paths: List[pathlib.Path] = []
+
+        for seq in self.sequences:
+            seq_path = pathlib.Path(seq.root_folder) / seq.folder
+            image_paths.extend([seq_path / img_name for img_name in seq.train_image_names])
+
+        return image_paths
+
+
+class ImageImageSequence(tf.keras.utils.Sequence):
+    def __init__(self, paths: List[pathlib.Path], image_size: typing.Tuple[int, int], shuffle: bool = False):
+        super().__init__()
+        self.image_size = image_size
+        self.shuffle = shuffle
+        self.image_paths: List[pathlib.Path] = paths
+        if self.shuffle:
+            random.shuffle(self.image_paths)
+
+    def __len__(self) -> int:
+        return len(self.image_paths)
+
+    def __getitem__(self, item: int) -> typing.Tuple[np.ndarray, np.ndarray]:
+        path = self.image_paths[item]
+        img = io.imread(str(path))
+        img = resize(img, self.image_size, order=2, preserve_range=True)
+        if len(img.shape) == 3:
+            img = img[np.newaxis, :, :]
+        else:
+            img = img[np.newaxis, :, :, np.newaxis]
+
+        return img, img
+
+    def on_epoch_end(self):
+        if self.shuffle:
+            random.shuffle(self.image_paths)
