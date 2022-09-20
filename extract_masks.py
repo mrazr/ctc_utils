@@ -2,6 +2,7 @@ import argparse
 import os
 from collections import namedtuple
 from typing import List, Union
+from pathlib import Path
 
 import numpy as np
 from skimage import measure, io
@@ -36,9 +37,9 @@ def save_cell_subimages(subimages: List[CellSubimage], ident: Union[int, str], f
         image_name = specific_name + 'i.tiff'
         mask_name = specific_name + 'm.png'
         if save_image:
-            io.imsave(os.path.join(folder, image_name), subimage.image)
+            io.imsave(os.path.join(folder, 'images', image_name), subimage.image)
         if save_mask:
-            io.imsave(os.path.join(folder, mask_name), subimage.mask)
+            io.imsave(os.path.join(folder, 'masks', mask_name), subimage.mask)
 
 
 def make_dir(fol):
@@ -69,6 +70,12 @@ if __name__ == '__main__':
 
     if not os.path.exists(out_path):
         make_dir(out_path)
+    
+    if not (Path(out_path) / 'images').exists():
+      make_dir(Path(out_path) / 'images')
+    
+    if not (Path(out_path) / 'masks').exists():
+      make_dir(Path(out_path) / 'masks')
 
     print(in_path)
     print(out_path)
